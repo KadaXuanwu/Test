@@ -8,7 +8,6 @@ public struct MovementContext {
     // Input state
     public Vector3 MoveInput;
     public Vector3 WorldMoveDirection;
-    public float MaxSpeed;
 
     // Current state
     public Vector3 Velocity;

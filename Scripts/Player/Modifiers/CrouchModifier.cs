@@ -19,7 +19,7 @@ public class CrouchModifier : MovementModifierBase<CrouchConfig, CrouchEvents> {
         context.IsCrouching = wantsToCrouch;
 
         if (context.IsCrouching) {
-            context.MaxSpeed *= Config.SpeedMultiplier;
+            // TODO move slower
         }
 
         UpdateControllerHeight(context.IsCrouching);

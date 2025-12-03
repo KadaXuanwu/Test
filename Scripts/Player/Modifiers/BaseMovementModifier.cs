@@ -12,14 +12,14 @@ public class BaseMovementModifier : MovementModifierBase<BaseMovementConfig> {
         UpdateAirborneTracking(context.IsGrounded);
         UpdateSprintBonusTracking(moveVelocity.magnitude);
 
-        Vector3 moveInput = context.WorldMoveDirection * context.MaxSpeed;
+        Vector3 moveInput = context.WorldMoveDirection * Config.MaxSpeed;
         float effectiveness = CalculateEffectiveness(context.IsGrounded);
 
         moveVelocity = ApplyAcceleration(moveVelocity, moveInput, effectiveness, context.DeltaTime);
-        moveVelocity = ClampSpeed(moveVelocity, context.MaxSpeed);
-        moveVelocity = ApplyFriction(moveVelocity, moveInput, context.MaxSpeed, context.IsGrounded, context.DeltaTime);
+        moveVelocity = ClampSpeed(moveVelocity, Config.MaxSpeed);
+        moveVelocity = ApplyFriction(moveVelocity, moveInput, Config.MaxSpeed, context.IsGrounded, context.DeltaTime);
 
-        if (moveVelocity.magnitude < Config.StoppingSpeed) {
+        if (moveVelocity.magnitude < Config.StoppingSpeed * context.DeltaTime) {
             moveVelocity = Vector3.zero;
         }
 

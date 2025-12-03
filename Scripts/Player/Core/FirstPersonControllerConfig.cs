@@ -3,7 +3,7 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "FPControllerConfig", menuName = "Character/Controller Config")]
 public class FirstPersonControllerConfig : ScriptableObject {
     [Header("Physics")]
-    [Tooltip("Gravity multiplier (1 = realistic, 2 = faster fall).")]
+    [Tooltip("Gravity multiplier.")]
     [Min(0f)] public float GravityMultiplier = 2f;
 
     [Tooltip("Downward velocity applied when grounded to maintain ground contact.")]
@@ -11,7 +11,7 @@ public class FirstPersonControllerConfig : ScriptableObject {
 
     [Header("Look")]
     [Tooltip("Mouse sensitivity multiplier.")]
-    [Min(0f)] public float MouseSensitivity = 2f;
+    [Min(0f)] public float MouseSensitivity = 5f;
 
     [Tooltip("Maximum vertical look angle.")]
     [Range(0f, 90f)] public float ClampAngle = 89.999f;
@@ -30,16 +30,4 @@ public class FirstPersonControllerConfig : ScriptableObject {
 
     [Tooltip("Magnitude of downward force for slope slide direction calculation.")]
     [Min(0f)] public float SlopeSlideProjectionMagnitude = 5f;
-
-    [Header("Moving Platforms")]
-    public string MovingPlatformTag = "MovingPlatform";
-
-    [Tooltip("How much platform velocity is inherited (0 = none, 1 = full).")]
-    [Range(0f, 1f)] public float PlatformVelocityInheritance = 1f;
-
-    [Tooltip("How much platform rotation is inherited (0 = none, 1 = full).")]
-    [Range(0f, 1f)] public float PlatformRotationInheritance = 1f;
-
-    [Tooltip("Maximum speed inherited from platforms.")]
-    [Min(0f)] public float MaxInheritedPlatformSpeed = 50f;
 }

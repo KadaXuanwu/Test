@@ -13,7 +13,7 @@ public class RunModifier : MovementModifierBase<RunConfig, RunEvents> {
         context.IsRunning = wantsToRun && canRun;
 
         if (context.IsRunning) {
-            context.MaxSpeed *= Config.SpeedMultiplier;
+            // TODO move faster
         }
 
         if (context.IsRunning != _wasRunningLastFrame) {

@@ -32,4 +32,6 @@ public class SlidingConfig : ScriptableObject, IModifierConfig {
 
     [Tooltip("Frames below threshold before stopping slide.")]
     [Min(1)] public int StoppedFrameThreshold = 3;
+
+    public IMovementModifier CreateModifier() => new SlidingModifier(this);
 }

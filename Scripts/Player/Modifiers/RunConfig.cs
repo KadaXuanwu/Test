@@ -7,4 +7,6 @@ public class RunConfig : ScriptableObject, IModifierConfig {
 
     [Tooltip("If true, player must be moving forward to run.")]
     public bool RequireForwardMovement = true;
+
+    public IMovementModifier CreateModifier() => new RunModifier(this);
 }

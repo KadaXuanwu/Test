@@ -1,8 +1,6 @@
 using UnityEngine;
 
 public class CrouchModifier : MovementModifierBase<CrouchConfig, CrouchEvents> {
-    public override int Priority => -20;
-
     private bool _wasCrouchingLastFrame;
 
     public CrouchModifier(CrouchConfig config) : base(config) { }

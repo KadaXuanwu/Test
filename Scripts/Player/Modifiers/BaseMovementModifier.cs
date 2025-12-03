@@ -1,8 +1,6 @@
 using UnityEngine;
 
 public class BaseMovementModifier : MovementModifierBase<BaseMovementConfig> {
-    public override int Priority => 0;
-
     private float _lastHighVelocityLostTimestamp;
     private float _timestampAirborneStarted;
 

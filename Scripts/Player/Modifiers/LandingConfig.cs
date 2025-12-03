@@ -7,4 +7,6 @@ public class LandingConfig : ScriptableObject, IModifierConfig {
 
     [Tooltip("Minimum fall velocity to trigger landing effects.")]
     [Min(0f)] public float MinImpactVelocity = 2f;
+
+    public IMovementModifier CreateModifier() => new LandingModifier(this);
 }

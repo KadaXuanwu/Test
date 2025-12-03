@@ -22,4 +22,6 @@ public class JumpConfig : ScriptableObject, IModifierConfig {
 
     [Tooltip("Damping applied to downward velocity when jumping mid-air.")]
     [Min(0f)] public float MidAirVelocityDamping = 5f;
+
+    public IMovementModifier CreateModifier() => new JumpModifier(this);
 }

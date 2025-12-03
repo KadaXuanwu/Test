@@ -42,4 +42,6 @@ public class BaseMovementConfig : ScriptableObject, IModifierConfig {
 
     [Tooltip("Movement effectiveness multiplier during sprint bonus.")]
     [Min(1f)] public float SprintBonusVelocityFactor = 1.2f;
+
+    public IMovementModifier CreateModifier() => new BaseMovementModifier(this);
 }

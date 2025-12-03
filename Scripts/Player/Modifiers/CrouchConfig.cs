@@ -28,4 +28,6 @@ public class CrouchConfig : ScriptableObject, IModifierConfig {
 
     [Tooltip("Speed of camera transition when crouching/standing.")]
     [Min(0f)] public float TransitionSpeed = 3f;
+
+    public IMovementModifier CreateModifier() => new CrouchModifier(this);
 }

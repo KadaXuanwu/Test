@@ -1,8 +1,6 @@
 using UnityEngine;
 
 public class RunModifier : MovementModifierBase<RunConfig, RunEvents> {
-    public override int Priority => -10;
-
     private bool _wasRunningLastFrame;
 
     public RunModifier(RunConfig config) : base(config) { }

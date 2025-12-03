@@ -5,6 +5,10 @@ using UnityEngine;
 public class FirstPersonController : MonoBehaviour {
     [SerializeField] private FirstPersonControllerConfig config;
 
+    [Header("Modifiers")]
+    [Tooltip("Modifier configs in execution order. First = runs first.")]
+    [SerializeField] private List<ScriptableObject> modifierConfigs = new List<ScriptableObject>();
+
     [Header("References")]
     [SerializeField] private Transform groundCheckOrigin;
     [SerializeField] private Transform cameraHolder;
@@ -62,6 +66,8 @@ public class FirstPersonController : MonoBehaviour {
         if (Input == null) {
             InitializeDefaultInput();
         }
+
+        InitializeModifiers();
     }
 
     private void Update() {
@@ -92,10 +98,6 @@ public class FirstPersonController : MonoBehaviour {
 
     #region Initialization
 
-    /// <summary>
-    /// Initialize with custom input provider.
-    /// Call before Start() or use default InputSystem input.
-    /// </summary>
     public void Initialize(ICharacterInput input) {
         Input = input;
     }
@@ -106,13 +108,27 @@ public class FirstPersonController : MonoBehaviour {
         Input = defaultInput;
     }
 
+    private void InitializeModifiers() {
+        foreach (ScriptableObject configObj in modifierConfigs) {
+            if (configObj == null) {
+                continue;
+            }
+
+            if (configObj is IModifierConfig modifierConfig) {
+                IMovementModifier modifier = modifierConfig.CreateModifier();
+                modifier.OnInitialize(this);
+                _modifiers.Add(modifier);
+            }
+            else {
+                Debug.LogWarning($"[{nameof(FirstPersonController)}] {configObj.name} does not implement IModifierConfig", this);
+            }
+        }
+    }
+
     #endregion
 
     #region Modifier Management
 
-    /// <summary>
-    /// Add a movement modifier. Automatically sorted by priority.
-    /// </summary>
     public T AddModifier<T>(T modifier) where T : class, IMovementModifier {
         if (_modifiers.Contains(modifier)) {
             Debug.LogWarning($"[{nameof(FirstPersonController)}] Modifier {modifier.GetType().Name} already added.");
@@ -121,13 +137,19 @@ public class FirstPersonController : MonoBehaviour {
 
         modifier.OnInitialize(this);
         _modifiers.Add(modifier);
-        SortModifiers();
         return modifier;
     }
 
-    /// <summary>
-    /// Remove a movement modifier.
-    /// </summary>
+    public void InsertModifier(IMovementModifier modifier, int index) {
+        if (_modifiers.Contains(modifier)) {
+            Debug.LogWarning($"[{nameof(FirstPersonController)}] Modifier {modifier.GetType().Name} already added.");
+            return;
+        }
+
+        modifier.OnInitialize(this);
+        _modifiers.Insert(Mathf.Clamp(index, 0, _modifiers.Count), modifier);
+    }
+
     public bool RemoveModifier(IMovementModifier modifier) {
         if (_modifiers.Remove(modifier)) {
             modifier.OnRemove();
@@ -136,9 +158,6 @@ public class FirstPersonController : MonoBehaviour {
         return false;
     }
 
-    /// <summary>
-    /// Remove a modifier by type.
-    /// </summary>
     public bool RemoveModifier<T>() where T : class, IMovementModifier {
         T modifier = GetModifier<T>();
         if (modifier != null) {
@@ -147,9 +166,6 @@ public class FirstPersonController : MonoBehaviour {
         return false;
     }
 
-    /// <summary>
-    /// Get a modifier by type.
-    /// </summary>
     public T GetModifier<T>() where T : class, IMovementModifier {
         for (int i = 0; i < _modifiers.Count; i++) {
             if (_modifiers[i] is T typed) {
@@ -159,17 +175,11 @@ public class FirstPersonController : MonoBehaviour {
         return null;
     }
 
-    /// <summary>
-    /// Try to get a modifier by type.
-    /// </summary>
     public bool TryGetModifier<T>(out T modifier) where T : class, IMovementModifier {
         modifier = GetModifier<T>();
         return modifier != null;
     }
 
-    /// <summary>
-    /// Check if a modifier type exists.
-    /// </summary>
     public bool HasModifier<T>() where T : class, IMovementModifier {
         for (int i = 0; i < _modifiers.Count; i++) {
             if (_modifiers[i] is T) {
@@ -179,9 +189,6 @@ public class FirstPersonController : MonoBehaviour {
         return false;
     }
 
-    /// <summary>
-    /// Get all modifiers of a specific type.
-    /// </summary>
     public void GetModifiers<T>(List<T> results) where T : class, IMovementModifier {
         results.Clear();
         for (int i = 0; i < _modifiers.Count; i++) {
@@ -191,14 +198,7 @@ public class FirstPersonController : MonoBehaviour {
         }
     }
 
-    /// <summary>
-    /// Get read-only access to all modifiers.
-    /// </summary>
     public IReadOnlyList<IMovementModifier> GetAllModifiers() => _modifiers;
-
-    private void SortModifiers() {
-        _modifiers.Sort((a, b) => a.Priority.CompareTo(b.Priority));
-    }
 
     #endregion
 
@@ -222,11 +222,8 @@ public class FirstPersonController : MonoBehaviour {
         }
 
         _currentContext = new MovementContext {
-            // Input
             MoveInput = new Vector3(rawInput.x, 0f, rawInput.y),
             WorldMoveDirection = worldDirection,
-
-            // State
             Velocity = _velocity,
             Position = transform.position,
             IsGrounded = IsGrounded,
@@ -234,12 +231,8 @@ public class FirstPersonController : MonoBehaviour {
             GroundInfo = CurrentGroundInfo,
             DeltaTime = Time.deltaTime,
             PreviousYVelocity = _yVelocityLastFrame,
-
-            // Modifier flags (set by modifiers)
             IsCrouching = false,
             IsRunning = false,
-
-            // Control flags
             PreventMovement = false,
             PreventGravity = false,
             ConsumedJump = false
@@ -327,10 +320,6 @@ public class FirstPersonController : MonoBehaviour {
         }
     }
 
-    /// <summary>
-    /// Get the current rotation angles.
-    /// X = vertical (pitch), Y = horizontal (yaw).
-    /// </summary>
     public Vector3 GetRotation() => _currentRotation;
 
     #endregion
@@ -354,7 +343,6 @@ public class FirstPersonController : MonoBehaviour {
         Vector3 flattestNormal = Vector3.up;
         Collider groundCollider = null;
 
-        // Center raycast
         if (Physics.Raycast(centerPos, Vector3.down, out RaycastHit centerHit, config.GroundRaycastDistance, config.GroundLayers)) {
             info.OnGround = true;
             float angle = Vector3.Angle(centerHit.normal, Vector3.up);
@@ -365,7 +353,6 @@ public class FirstPersonController : MonoBehaviour {
             }
         }
 
-        // Radial raycasts
         for (int i = 0; i < config.GroundCheckCount; i++) {
             float angle = i * Mathf.PI * 2f / config.GroundCheckCount;
             Vector3 offset = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * config.GroundCheckRadius;
@@ -392,7 +379,6 @@ public class FirstPersonController : MonoBehaviour {
             info.SlideDirection = Vector3.ProjectOnPlane(downwardForce, flattestNormal).normalized;
         }
 
-        // Moving platform velocity
         if (groundCollider != null && groundCollider.attachedRigidbody != null) {
             info.GroundVelocity = groundCollider.attachedRigidbody.GetPointVelocity(centerPos);
         }
@@ -413,78 +399,46 @@ public class FirstPersonController : MonoBehaviour {
         _yVelocityLastFrame = _velocity.y;
     }
 
-    /// <summary>
-    /// Timestamp when the player was last grounded.
-    /// Used for coyote time calculations.
-    /// </summary>
     public float GetLastGroundedTimestamp() => _lastGroundedTimestamp;
 
-    /// <summary>
-    /// Time since the player was last grounded.
-    /// </summary>
     public float GetTimeSinceGrounded() => Time.time - _lastGroundedTimestamp;
 
     #endregion
 
     #region Public API
 
-    /// <summary>
-    /// Directly set the velocity.
-    /// </summary>
     public void SetVelocity(Vector3 velocity) {
         _velocity = velocity;
     }
 
-    /// <summary>
-    /// Add to the current velocity.
-    /// </summary>
     public void AddVelocity(Vector3 velocity) {
         _velocity += velocity;
     }
 
-    /// <summary>
-    /// Set horizontal velocity only, preserving Y.
-    /// </summary>
     public void SetHorizontalVelocity(Vector3 velocity) {
         _velocity.x = velocity.x;
         _velocity.z = velocity.z;
     }
 
-    /// <summary>
-    /// Set vertical velocity only, preserving XZ.
-    /// </summary>
     public void SetVerticalVelocity(float yVelocity) {
         _velocity.y = yVelocity;
     }
 
-    /// <summary>
-    /// Set the look rotation.
-    /// X = vertical (pitch), Y = horizontal (yaw).
-    /// </summary>
     public void SetRotation(Vector3 rotation) {
         _currentRotation = rotation;
         _currentRotation.x = Mathf.Clamp(_currentRotation.x, -config.ClampAngle, config.ClampAngle);
     }
 
-    /// <summary>
-    /// Add to the current rotation.
-    /// </summary>
     public void AddRotation(Vector3 delta) {
         _currentRotation += delta;
         _currentRotation.x = Mathf.Clamp(_currentRotation.x, -config.ClampAngle, config.ClampAngle);
     }
 
-    /// <summary>
-    /// Reset velocity to zero.
-    /// </summary>
     public void ResetVelocity() {
         _velocity = Vector3.zero;
         _yVelocityLastFrame = 0f;
     }
 
-    /// <summary>
-    /// Teleport to a position with optional rotation and velocity reset.
-    /// </summary>
     public void Teleport(Vector3 position, Vector3? rotation = null, bool resetVelocity = true) {
         bool wasEnabled = _controller.enabled;
         _controller.enabled = false;
@@ -505,16 +459,10 @@ public class FirstPersonController : MonoBehaviour {
         Events.InvokeTeleported(position);
     }
 
-    /// <summary>
-    /// Enable or disable the character controller.
-    /// </summary>
     public void SetControllerEnabled(bool enabled) {
         _controller.enabled = enabled;
     }
 
-    /// <summary>
-    /// Lock or unlock the cursor.
-    /// </summary>
     public void SetCursorLocked(bool locked) {
         Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
         Cursor.visible = !locked;
@@ -524,31 +472,10 @@ public class FirstPersonController : MonoBehaviour {
 
     #region Queries
 
-    /// <summary>
-    /// Check if the player is currently crouching.
-    /// Requires CrouchModifier to be active.
-    /// </summary>
     public bool IsCrouching => _currentContext.IsCrouching;
-
-    /// <summary>
-    /// Check if the player is currently running.
-    /// Requires RunModifier to be active.
-    /// </summary>
     public bool IsRunning => _currentContext.IsRunning;
-
-    /// <summary>
-    /// Check if the player is on a slope that causes sliding.
-    /// </summary>
     public bool IsOnSlope => CurrentGroundInfo.OnSlope;
-
-    /// <summary>
-    /// Get the current horizontal speed.
-    /// </summary>
     public float HorizontalSpeed => new Vector3(_velocity.x, 0f, _velocity.z).magnitude;
-
-    /// <summary>
-    /// Get the current vertical speed (positive = up).
-    /// </summary>
     public float VerticalSpeed => _velocity.y;
 
     #endregion
@@ -563,13 +490,9 @@ public class FirstPersonController : MonoBehaviour {
 
         Vector3 centerPos = groundCheckOrigin != null ? groundCheckOrigin.position : transform.position;
 
-        // Ground check visualization
         Gizmos.color = IsGrounded ? Color.green : Color.red;
-
-        // Center ray
         Gizmos.DrawLine(centerPos, centerPos + Vector3.down * config.GroundRaycastDistance);
 
-        // Radial rays
         for (int i = 0; i < config.GroundCheckCount; i++) {
             float angle = i * Mathf.PI * 2f / config.GroundCheckCount;
             Vector3 offset = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * config.GroundCheckRadius;
@@ -577,11 +500,9 @@ public class FirstPersonController : MonoBehaviour {
             Gizmos.DrawLine(rayOrigin, rayOrigin + Vector3.down * config.GroundRaycastDistance);
         }
 
-        // Ground check radius circle
         Gizmos.color = Color.yellow;
         DrawGizmoCircle(centerPos, config.GroundCheckRadius, 16);
 
-        // Velocity visualization
         if (Application.isPlaying) {
             Gizmos.color = Color.blue;
             Gizmos.DrawLine(transform.position, transform.position + _velocity * 0.5f);

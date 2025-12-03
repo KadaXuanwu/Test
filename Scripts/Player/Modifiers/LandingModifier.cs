@@ -1,8 +1,6 @@
 using UnityEngine;
 
 public class LandingModifier : MovementModifierBase<LandingConfig, LandingEvents> {
-    public override int Priority => 60;
-
     private float _timestampAirborneStarted;
 
     public LandingModifier(LandingConfig config) : base(config) { }

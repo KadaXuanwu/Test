@@ -1,8 +1,6 @@
 using UnityEngine;
 
 public class SlidingModifier : MovementModifierBase<SlidingConfig, SlidingEvents> {
-    public override int Priority => 100;
-
     public bool IsSliding => _phase != SlidingPhase.None;
 
     private enum SlidingPhase {

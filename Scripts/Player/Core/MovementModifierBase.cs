@@ -4,7 +4,6 @@ public abstract class MovementModifierBase<TConfig, TEvents> : IMovementModifier
     where TConfig : ScriptableObject, IModifierConfig
     where TEvents : class, IModifierEvents, new() {
 
-    public abstract int Priority { get; }
     public virtual bool IsActive => _isActive;
     public TEvents Events { get; } = new TEvents();
 
@@ -31,13 +30,8 @@ public abstract class MovementModifierBase<TConfig, TEvents> : IMovementModifier
 
     public abstract void ProcessMovement(ref MovementContext context);
 
-    public void SetActive(bool active) {
-        _isActive = active;
-    }
-
-    public void SetConfig(TConfig config) {
-        Config = config;
-    }
+    public void SetActive(bool active) => _isActive = active;
+    public void SetConfig(TConfig config) => Config = config;
 }
 
 /// <summary>
@@ -46,7 +40,6 @@ public abstract class MovementModifierBase<TConfig, TEvents> : IMovementModifier
 public abstract class MovementModifierBase<TConfig> : IMovementModifier
     where TConfig : ScriptableObject, IModifierConfig {
 
-    public abstract int Priority { get; }
     public virtual bool IsActive => _isActive;
 
     protected FirstPersonController Controller { get; private set; }
@@ -84,7 +77,6 @@ public abstract class MovementModifierBase<TConfig> : IMovementModifier
 /// Base class for modifiers without config or custom events.
 /// </summary>
 public abstract class MovementModifierBase : IMovementModifier {
-    public abstract int Priority { get; }
     public virtual bool IsActive => _isActive;
 
     protected FirstPersonController Controller { get; private set; }

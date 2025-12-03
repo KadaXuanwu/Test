@@ -1,8 +1,6 @@
 using UnityEngine;
 
 public class JumpModifier : MovementModifierBase<JumpConfig, JumpEvents> {
-    public override int Priority => 50;
-
     public int AirJumpsRemaining => _airJumpsRemaining;
 
     private float _lastJumpTimestamp;

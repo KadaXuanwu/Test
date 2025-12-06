@@ -1,20 +1,20 @@
 using UnityEngine;
 
 public class JumpModifier : MovementModifierBase<JumpConfig, JumpEvents> {
-    public int AirJumpsRemaining => _airJumpsRemaining;
-
     private float _lastJumpTimestamp;
-    private int _airJumpsRemaining;
 
     public JumpModifier(JumpConfig config) : base(config) { }
 
     public override void ProcessMovement(ref MovementContext context) {
+        JumpState state = context.State.GetOrCreate<JumpState>();
+
+        // Reset air jumps on landing
         if (context.IsGrounded && !context.WasGroundedLastFrame) {
-            _airJumpsRemaining = Config.MaxAirJumps;
+            state.AirJumpsRemaining = Config.MaxAirJumps;
             Events.InvokeAirJumpsReset(Config.MaxAirJumps);
         }
 
-        if (!Input.JumpPressed || context.ConsumedJump) {
+        if (!Input.JumpPressed || state.ConsumedJump) {
             return;
         }
 
@@ -25,7 +25,7 @@ public class JumpModifier : MovementModifierBase<JumpConfig, JumpEvents> {
 
         float lastGrounded = Controller.GetLastGroundedTimestamp();
         bool inCoyoteTime = lastGrounded + Config.CoyoteTime > Time.time;
-        bool canAirJump = !context.IsGrounded && !inCoyoteTime && _airJumpsRemaining > 0;
+        bool canAirJump = !context.IsGrounded && !inCoyoteTime && state.AirJumpsRemaining > 0;
 
         if (!context.IsGrounded && !inCoyoteTime && !canAirJump) {
             return;
@@ -34,16 +34,16 @@ public class JumpModifier : MovementModifierBase<JumpConfig, JumpEvents> {
         bool isAirJump = !context.IsGrounded && !inCoyoteTime && canAirJump;
 
         if (isAirJump) {
-            _airJumpsRemaining--;
-            Events.InvokeAirJumpUsed(_airJumpsRemaining);
+            state.AirJumpsRemaining--;
+            Events.InvokeAirJumpUsed(state.AirJumpsRemaining);
         }
 
-        ExecuteJump(ref context, isAirJump);
+        ExecuteJump(ref context, state, isAirJump);
     }
 
-    private void ExecuteJump(ref MovementContext context, bool isAirJump) {
+    private void ExecuteJump(ref MovementContext context, JumpState state, bool isAirJump) {
         _lastJumpTimestamp = Time.time;
-        context.ConsumedJump = true;
+        state.ConsumedJump = true;
 
         float yVelocity = context.Velocity.y;
 
@@ -64,7 +64,7 @@ public class JumpModifier : MovementModifierBase<JumpConfig, JumpEvents> {
             context.Velocity,
             context.WasGroundedLastFrame,
             isAirJump,
-            _airJumpsRemaining
+            state.AirJumpsRemaining
         );
         Events.InvokeJumped(eventData);
     }

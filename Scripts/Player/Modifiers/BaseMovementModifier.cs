@@ -10,14 +10,22 @@ public class BaseMovementModifier : MovementModifierBase<BaseMovementConfig> {
         Vector3 moveVelocity = new Vector3(context.Velocity.x, 0f, context.Velocity.z);
 
         UpdateAirborneTracking(context.IsGrounded);
-        UpdateSprintBonusTracking(moveVelocity.magnitude);
 
-        Vector3 moveInput = context.WorldMoveDirection * Config.MaxSpeed;
+        float maxSpeed = Config.MaxSpeed * context.SpeedMultiplier;
+
+        UpdateSprintBonusTracking(moveVelocity.magnitude, maxSpeed);
+
+        Vector3 moveInput = context.WorldMoveDirection * maxSpeed;
         float effectiveness = CalculateEffectiveness(context.IsGrounded);
 
         moveVelocity = ApplyAcceleration(moveVelocity, moveInput, effectiveness, context.DeltaTime);
-        moveVelocity = ClampSpeed(moveVelocity, Config.MaxSpeed);
-        moveVelocity = ApplyFriction(moveVelocity, moveInput, Config.MaxSpeed, context.IsGrounded, context.DeltaTime);
+
+        // Only clamp speed when grounded - airborne velocity changes should be gradual via friction
+        if (context.IsGrounded) {
+            moveVelocity = ClampSpeed(moveVelocity, maxSpeed);
+        }
+
+        moveVelocity = ApplyFriction(moveVelocity, moveInput, maxSpeed, context.IsGrounded, context.DeltaTime);
 
         if (moveVelocity.magnitude < Config.StoppingSpeed * context.DeltaTime) {
             moveVelocity = Vector3.zero;
@@ -32,8 +40,9 @@ public class BaseMovementModifier : MovementModifierBase<BaseMovementConfig> {
         }
     }
 
-    private void UpdateSprintBonusTracking(float currentSpeed) {
-        if (currentSpeed < Config.MinRunVelocityForSprint) {
+    private void UpdateSprintBonusTracking(float currentSpeed, float maxSpeed) {
+        float scaledMinRunVelocity = Config.MinRunVelocityForSprint * (maxSpeed / Config.MaxSpeed);
+        if (currentSpeed < scaledMinRunVelocity) {
             _lastHighVelocityLostTimestamp = Time.time;
         }
     }

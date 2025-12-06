@@ -1,35 +1,35 @@
 using UnityEngine;
 
 public class CrouchModifier : MovementModifierBase<CrouchConfig, CrouchEvents> {
-    private bool _wasCrouchingLastFrame;
-
     public CrouchModifier(CrouchConfig config) : base(config) { }
 
     public override void ProcessMovement(ref MovementContext context) {
+        CrouchState state = context.State.GetOrCreate<CrouchState>();
+
         bool wantsToCrouch = Input.CrouchPressed;
 
         // Check if we can stand up
-        if (_wasCrouchingLastFrame && !wantsToCrouch) {
+        if (state.WasCrouchingLastFrame && !wantsToCrouch) {
             if (!CanStandUp()) {
                 wantsToCrouch = true;
                 Events.InvokeCrouchBlocked();
             }
         }
 
-        context.IsCrouching = wantsToCrouch;
+        state.IsCrouching = wantsToCrouch;
 
-        if (context.IsCrouching) {
-            // TODO move slower
+        if (state.IsCrouching) {
+            context.SpeedMultiplier *= Config.SpeedMultiplier;
         }
 
-        UpdateControllerHeight(context.IsCrouching);
-        UpdateCameraPosition(context.IsCrouching, context.DeltaTime);
+        UpdateControllerHeight(state.IsCrouching);
+        UpdateCameraPosition(state.IsCrouching, context.DeltaTime);
 
-        if (context.IsCrouching != _wasCrouchingLastFrame) {
-            Events.InvokeCrouchChanged(context.IsCrouching);
+        if (state.IsCrouching != state.WasCrouchingLastFrame) {
+            Events.InvokeCrouchChanged(state.IsCrouching);
         }
 
-        _wasCrouchingLastFrame = context.IsCrouching;
+        state.WasCrouchingLastFrame = state.IsCrouching;
     }
 
     private bool CanStandUp() {

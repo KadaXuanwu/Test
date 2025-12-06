@@ -19,6 +19,7 @@ public class SlidingModifier : MovementModifierBase<SlidingConfig, SlidingEvents
     public SlidingModifier(SlidingConfig config) : base(config) { }
 
     public override void ProcessMovement(ref MovementContext context) {
+        SlidingState state = context.State.GetOrCreate<SlidingState>();
         _lastPosition = context.Position;
 
         bool shouldSlide = context.GroundInfo.OnGround &&
@@ -29,12 +30,17 @@ public class SlidingModifier : MovementModifierBase<SlidingConfig, SlidingEvents
             if (_phase != SlidingPhase.None) {
                 EndSliding(false);
             }
+            state.IsSliding = false;
             UpdateEvents(context);
             return;
         }
 
         UpdatePhase();
         ApplySliding(ref context);
+        
+        // Set state for other modifiers to read
+        state.IsSliding = _phase != SlidingPhase.None;
+        
         UpdateEvents(context);
     }
 

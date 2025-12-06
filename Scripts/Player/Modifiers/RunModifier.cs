@@ -1,25 +1,29 @@
-using UnityEngine;
-
 public class RunModifier : MovementModifierBase<RunConfig, RunEvents> {
-    private bool _wasRunningLastFrame;
-
     public RunModifier(RunConfig config) : base(config) { }
 
     public override void ProcessMovement(ref MovementContext context) {
+        RunState state = context.State.GetOrCreate<RunState>();
+
         bool wantsToRun = Input.RunPressed;
         bool movingForward = !Config.RequireForwardMovement || context.MoveInput.z > 0f;
-        bool canRun = !context.IsCrouching && movingForward;
 
-        context.IsRunning = wantsToRun && canRun;
-
-        if (context.IsRunning) {
-            // TODO move faster
+        // Check if crouching (optional dependency)
+        bool isCrouching = false;
+        if (context.State.TryGet<CrouchState>(out CrouchState crouchState)) {
+            isCrouching = crouchState.IsCrouching;
         }
 
-        if (context.IsRunning != _wasRunningLastFrame) {
-            Events.InvokeRunningChanged(context.IsRunning);
+        bool canRun = !isCrouching && movingForward;
+        state.IsRunning = wantsToRun && canRun;
+
+        if (state.IsRunning) {
+            context.SpeedMultiplier *= Config.SpeedMultiplier;
         }
 
-        _wasRunningLastFrame = context.IsRunning;
+        if (state.IsRunning != state.WasRunningLastFrame) {
+            Events.InvokeRunningChanged(state.IsRunning);
+        }
+
+        state.WasRunningLastFrame = state.IsRunning;
     }
 }

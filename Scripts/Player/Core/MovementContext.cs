@@ -5,27 +5,25 @@ using UnityEngine;
 /// Modifiers read and write to this to affect movement.
 /// </summary>
 public struct MovementContext {
-    // Input state
+    // === Input (set by controller, read by modifiers) ===
     public Vector3 MoveInput;
     public Vector3 WorldMoveDirection;
-
-    // Current state
-    public Vector3 Velocity;
     public Vector3 Position;
     public bool IsGrounded;
     public bool WasGroundedLastFrame;
     public GroundInfo GroundInfo;
     public float DeltaTime;
+    public float PreviousYVelocity;
 
-    // State flags (modifiers can read/write)
-    public bool IsCrouching;
-    public bool IsRunning;
-
-    // Control flags
+    // === Output (modified by modifiers) ===
+    public Vector3 Velocity;
+    public float SpeedMultiplier;
     public bool PreventMovement;
     public bool PreventGravity;
-    public bool ConsumedJump;
 
-    // Velocity from previous frame (for landing calculations, etc.)
-    public float PreviousYVelocity;
+    // === Extensible modifier state ===
+    /// <summary>
+    /// Container for modifier-specific state. Use State.GetOrCreate&lt;T&gt;() to access.
+    /// </summary>
+    public ModifierStateContainer State;
 }

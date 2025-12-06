@@ -5,6 +5,10 @@ using UnityEngine;
 public class FirstPersonController : MonoBehaviour {
     [SerializeField] private FirstPersonControllerConfig config;
 
+    [Header("Input")]
+    [Tooltip("Input configuration. If null, uses InputSystemCharacterInputConfig by default.")]
+    [SerializeField] private ScriptableObject inputConfig;
+
     [Header("Modifiers")]
     [Tooltip("Modifier configs in execution order. First = runs first.")]
     [SerializeField] private List<ScriptableObject> modifierConfigs = new List<ScriptableObject>();
@@ -42,6 +46,7 @@ public class FirstPersonController : MonoBehaviour {
     private Vector3 _currentRotation;
     private float _lastFrameDeltaTime;
     private MovementContext _currentContext;
+    private ModifierStateContainer _stateContainer = new ModifierStateContainer();
 
     // Frame state tracking
     private bool _groundedLastFrame;
@@ -64,7 +69,7 @@ public class FirstPersonController : MonoBehaviour {
 
     private void Start() {
         if (Input == null) {
-            InitializeDefaultInput();
+            InitializeInput();
         }
 
         InitializeModifiers();
@@ -98,14 +103,30 @@ public class FirstPersonController : MonoBehaviour {
 
     #region Initialization
 
+    /// <summary>
+    /// Manually inject a custom input handler. Call before Start() or use inputConfig field instead.
+    /// </summary>
     public void Initialize(ICharacterInput input) {
         Input = input;
     }
 
-    private void InitializeDefaultInput() {
-        InputSystemCharacterInput defaultInput = new InputSystemCharacterInput();
-        defaultInput.Initialize(InputManager.Instance.Actions.Player);
-        Input = defaultInput;
+    private void InitializeInput() {
+        if (inputConfig != null) {
+            if (inputConfig is ICharacterInputConfig characterInputConfig) {
+                Input = characterInputConfig.CreateInput();
+            }
+            else {
+                Debug.LogError($"[{nameof(FirstPersonController)}] {inputConfig.name} does not implement ICharacterInputConfig", this);
+            }
+        }
+
+        // Fallback to default if no config assigned or creation failed
+        if (Input == null) {
+            InputSystemCharacterInput defaultInput = new InputSystemCharacterInput();
+            defaultInput.Initialize(InputManager.Instance.Actions.Player);
+            Input = defaultInput;
+            Debug.LogWarning($"[{nameof(FirstPersonController)}] No input config assigned, using default InputSystemCharacterInput", this);
+        }
     }
 
     private void InitializeModifiers() {
@@ -221,6 +242,8 @@ public class FirstPersonController : MonoBehaviour {
             worldDirection.Normalize();
         }
 
+        _stateContainer.ResetAll();
+
         _currentContext = new MovementContext {
             MoveInput = new Vector3(rawInput.x, 0f, rawInput.y),
             WorldMoveDirection = worldDirection,
@@ -231,11 +254,10 @@ public class FirstPersonController : MonoBehaviour {
             GroundInfo = CurrentGroundInfo,
             DeltaTime = Time.deltaTime,
             PreviousYVelocity = _yVelocityLastFrame,
-            IsCrouching = false,
-            IsRunning = false,
             PreventMovement = false,
             PreventGravity = false,
-            ConsumedJump = false
+            SpeedMultiplier = 1f,
+            State = _stateContainer
         };
     }
 
@@ -472,11 +494,16 @@ public class FirstPersonController : MonoBehaviour {
 
     #region Queries
 
-    public bool IsCrouching => _currentContext.IsCrouching;
-    public bool IsRunning => _currentContext.IsRunning;
+    public bool IsCrouching => _stateContainer.TryGet<CrouchState>(out CrouchState cs) && cs.IsCrouching;
+    public bool IsRunning => _stateContainer.TryGet<RunState>(out RunState rs) && rs.IsRunning;
     public bool IsOnSlope => CurrentGroundInfo.OnSlope;
     public float HorizontalSpeed => new Vector3(_velocity.x, 0f, _velocity.z).magnitude;
     public float VerticalSpeed => _velocity.y;
+
+    /// <summary>
+    /// Access the state container to query custom modifier states.
+    /// </summary>
+    public ModifierStateContainer ModifierState => _stateContainer;
 
     #endregion
 
